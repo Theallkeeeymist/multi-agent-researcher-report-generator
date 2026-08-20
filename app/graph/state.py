@@ -16,3 +16,9 @@ class ResearchState(BaseModel):
 class CriticOutput(BaseModel):
     rating: int = Field(default=0, ge=0, le=5, description="The rating of the critic node, indicating the quality of the research findings.")
     feedback: str = Field(default="", description="Feedback provided by the critic node.")
+
+class EvalScore(BaseModel):
+    faithfulness: int = Field(..., ge=1, le=5, description="Are claims grounded in the research, not invented?")
+    completeness: int = Field(..., ge=1, le=5, description="Does it address every topic listed?")
+    coherence: int = Field(..., ge=1, le=5, description="Is it well-organized and readable?")
+    notes: str = Field(..., description="Brief justification for the scores.")

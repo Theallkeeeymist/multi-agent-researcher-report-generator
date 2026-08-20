@@ -97,14 +97,17 @@ Rate this report from 0-5 based on:
 - Depth: is each topic explained with real substance, not just surface-level mentions?
 
 Then give specific, actionable feedback. If the rating is below 3, the feedback must
-clearly state what's missing or weak so the researcher can improve it on a retry."""
-    
-    structured_llm = critic_llm.with_structured_output(CriticOutput)
+clearly state what's missing or weak so the researcher can improve it on a retry.
+
+Respond with ONLY a JSON object in exactly this format, no other text:
+{{"rating": <integer 0-5>, "feedback": "<your feedback as a single string>"}}"""
+
+    structured_llm = critic_llm.with_structured_output(CriticOutput, method="json_mode")
     result = structured_llm.invoke(prompt)
 
     return {
         "rating": result.rating,
-        "critic_feedback": result.feedback
+        "critic_feedback": result.feedback,
     }
 
 def writer(state: ResearchState) -> dict:
