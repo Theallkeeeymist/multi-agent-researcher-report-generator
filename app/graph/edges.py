@@ -1,8 +1,10 @@
 from app.graph.state import ResearchState
 
+"""
+To re route back if critic is not satisfied
+"""
+
 MAX_LOOPS = 3
-
-
 def route_after_critic(state: ResearchState) -> str:
     """
     Routes from the critic node: back to researcher if the answer quality

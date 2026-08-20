@@ -1,6 +1,9 @@
 from app.graph.llm import llm, critic_llm
 from app.graph.state import ResearchState, CriticOutput
 from app.mcp_client import mcp_client
+from app.graph.utils import invoke_with_retry, research_topic
+import asyncio
+import time
 
 def planner(state: ResearchState) -> dict:
     """
@@ -8,7 +11,7 @@ def planner(state: ResearchState) -> dict:
     It populates the topics field in the ResearchState with relevant topics.
     """
     prompt = f"""A research question: '{state.question}' is provided, you're a researcher planning to report on the question.
-Your task is to generate a set of 5-10 topics that are HIGHLY relevant and specific to the research question, avoiding general or vague terms.
+Your task is to generate a set of 3-5 topics that are HIGHLY relevant and specific to the research question, avoiding general or vague terms.
 Return ONLY the topics, separated by commas, with no numbering, no extra text, no explanation."""
 
     response = llm.invoke(prompt)
@@ -16,44 +19,16 @@ Return ONLY the topics, separated by commas, with no numbering, no extra text, n
 
     return {"topics": topics}
 
-
-async def researcher(state: ResearchState)-> dict:
-    """
-    Uses MCP tools (web_search, arxiv_search, semantic_scholar_search) to gather
-    information on each topic, then synthesizes a point-wise document grouped by topic.
-    On retry, incorporates critic_feedback to address prior gaps.
-    """
-
+start = time.time()
+async def researcher(state: ResearchState) -> dict:
     tools = await mcp_client.get_tools()
     llm_with_tools = llm.bind_tools(tools)
 
-    search_context = []
+    semaphore = asyncio.Semaphore(1)
 
-    for topic in state.topics:
-        tool_prompt = f"""You are researching the topic: "{topic}" for the question: "{state.question}"
-
-You have three tools available:
-- web_search: general web results, good for current events, practical/applied info
-- arxiv_search: academic papers, good for technical/theoretical concepts
-- semantic_scholar_search: academic papers with citation counts, good for established/foundational theory
-
-Pick the most appropriate tool(s) for this topic and call them to gather information."""
-
-        response = await llm_with_tools.ainvoke(tool_prompt)
-
-        if response.tool_calls:
-            for call in response.tool_calls:
-                tool = next((t for t in tools if t.name==call["name"]), None)
-
-                if tool is None:
-                    continue
-                try:
-                    result = await tool.ainvoke(call["args"])
-                    search_context.append(f"Topic: {topic}\nSource: {call['name']}\n{result}")
-                except Exception as e:
-                    search_context.append(f"Topic: {topic}\nSource: {call['name']}\nError: {e}")
-        else:
-            search_context.append(f"Topic: {topic}\nNo tool was called - model responded directly:\n{response.content}")
+    search_context = await asyncio.gather(
+        *(research_topic(topic, state.question, llm_with_tools, tools, semaphore) for topic in state.topics)
+    )
 
     combined_context = "\n\n---\n\n".join(search_context)
 
@@ -73,9 +48,9 @@ Group content clearly by topic. Cite sources (paper titles, URLs) where the sear
 Search results:
 {combined_context}"""
 
-    response = await llm.ainvoke(synthesis_prompt)
-
-    return {"answer": response.content, "loop_count": state.loop_count+1}
+    response = await invoke_with_retry(llm.ainvoke, synthesis_prompt)
+    print(f"researcher took {time.time() - start:.1f}s")
+    return {"answer": response.content, "loop_count": state.loop_count + 1}
 
 
 def critic(state: ResearchState) -> dict:
