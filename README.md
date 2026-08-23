@@ -155,4 +155,4 @@ Liveness check.
 
 *(In progress — offline evaluation harness scoring faithfulness,
 completeness, and coherence against a fixed set of test questions, separate
-from the in-pipeline critic. Results to be added here.)*
+from the in-pipeline critic. Results to be added)*
