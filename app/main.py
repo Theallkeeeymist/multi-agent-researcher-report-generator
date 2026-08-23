@@ -21,6 +21,28 @@ class QuestionRequest(BaseModel):
     question: str
 
 
+class ReportResponse(BaseModel):
+    report: str
+    topics: list[str]
+    rating: int
+    loop_count: int
+    critic_feedback: str
+
+
+@app.post("/research", response_model=ReportResponse)
+async def research(payload: QuestionRequest):
+    initial_state = ResearchState(question=payload.question)
+    result = await graph.ainvoke(initial_state)
+
+    return ReportResponse(
+        report=result["report"],
+        topics=result["topics"],
+        rating=result["rating"],
+        loop_count=result["loop_count"],
+        critic_feedback=result["critic_feedback"],
+    )
+
+
 def sse_event(event_type: str, data: dict) -> str:
     return f"data: {json.dumps({'type': event_type, **data})}\n\n"
 
@@ -47,9 +69,6 @@ async def research_stream(payload: QuestionRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
 @app.get("/health")
 def health():
     return {"status": "ok"}
