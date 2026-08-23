@@ -135,6 +135,19 @@ simpler blocking endpoint above).
 Liveness check.
 
 ---
+## Docker
+
+Images are published to Docker Hub(you can give it a try:) ):
+
+```bash
+docker pull theallkeeeymist/multi-agent-research-backend:latest
+docker pull theallkeeeymist/multi-agent-research-frontend:latest
+```
+
+Run locally with Docker Compose:
+```bash
+docker compose up --build
+```
 
 ## Known limitations
 
