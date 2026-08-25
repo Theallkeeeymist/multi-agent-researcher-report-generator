@@ -11,6 +11,6 @@ def route_after_critic(state: ResearchState) -> str:
     is insufficient, otherwise forward to writer. Caps retries at MAX_LOOPS
     so a persistently low rating can't loop forever.
     """
-    if state.rating >= 3 or state.loop_count >= MAX_LOOPS:
+    if state.rating > 3 or state.loop_count >= MAX_LOOPS:
         return "writer"
     return "researcher"

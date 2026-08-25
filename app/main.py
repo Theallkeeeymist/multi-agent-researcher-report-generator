@@ -2,12 +2,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
+from app.mcp_client import start_mcp_session, stop_mcp_session
 import json
 
 from app.graph.build_graph import graph
 from app.graph.state import ResearchState
 
-app = FastAPI(title="Multi-Agent Research & Report Generator")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await start_mcp_session()
+    yield
+    await stop_mcp_session()
+
+app = FastAPI(title="Multi-Agent Research & Report Generator", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +51,7 @@ async def research(payload: QuestionRequest):
     )
 
 
+# Currently not in use
 def sse_event(event_type: str, data: dict) -> str:
     return f"data: {json.dumps({'type': event_type, **data})}\n\n"
 

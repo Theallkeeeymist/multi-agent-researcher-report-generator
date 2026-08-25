@@ -1,6 +1,6 @@
 from app.graph.llm import llm, critic_llm
 from app.graph.state import ResearchState, CriticOutput
-from app.mcp_client import mcp_client
+from app.mcp_client import get_cached_tools
 from app.graph.utils import invoke_with_retry, research_topic
 import asyncio
 import time
@@ -11,8 +11,8 @@ def planner(state: ResearchState) -> dict:
     It populates the topics field in the ResearchState with relevant topics.
     """
     prompt = f"""A research question: '{state.question}' is provided, you're a researcher planning to report on the question.
-Your task is to generate a set of 3-5 topics that are HIGHLY relevant and specific to the research question, avoiding general or vague terms.
-Return ONLY the topics, separated by commas, with no numbering, no extra text, no explanation."""
+    Your task is to generate a set of 3-5 topics that are HIGHLY relevant and specific to the research question, avoiding general or vague terms.
+    Return ONLY the topics, separated by commas, with no numbering, no extra text, no explanation."""
 
     response = llm.invoke(prompt)
     topics = [t.strip() for t in response.content.split(",") if t.strip()]
@@ -21,10 +21,10 @@ Return ONLY the topics, separated by commas, with no numbering, no extra text, n
 
 start = time.time()
 async def researcher(state: ResearchState) -> dict:
-    tools = await mcp_client.get_tools()
+    tools = get_cached_tools()
     llm_with_tools = llm.bind_tools(tools)
 
-    semaphore = asyncio.Semaphore(1)
+    semaphore = asyncio.Semaphore(2)
 
     search_context = await asyncio.gather(
         *(research_topic(topic, state.question, llm_with_tools, tools, semaphore) for topic in state.topics)
@@ -40,13 +40,19 @@ IMPORTANT — your previous attempt was rejected. Address this feedback specific
 {state.critic_feedback}"""
 
     synthesis_prompt = f"""You are a seasoned researcher. Using the search results below, write a
-well-organized, point-wise document (max 1000-1500 words) covering theories, principles, and
-concepts relevant to each topic for the question: "{state.question}"
+    well-organized, point-wise document (max 1000-1500 words) covering theories, principles, and
+    concepts relevant to each topic for the question: "{state.question}"
 
-Group content clearly by topic. Cite sources (paper titles, URLs) where the search results provide them.{feedback_note}
+    Group content clearly by topic. Cite sources (paper titles, URLs) where the search results provide them.
 
-Search results:
-{combined_context}"""
+    CRITICAL: For every specific claim, number, or finding, cite the exact source it came from.
+    If a claim is your own inference, synthesis, or estimate rather than something stated directly
+    in the search results, explicitly flag it with [inference] — never present an estimate or
+    extrapolation as if it were reported by a source. When in doubt about whether something was
+    actually stated in the search results, treat it as an inference and flag it.{feedback_note}
+
+    Search results:
+    {combined_context}"""
 
     response = await invoke_with_retry(llm.ainvoke, synthesis_prompt)
     print(f"researcher took {time.time() - start:.1f}s")
@@ -60,22 +66,22 @@ def critic(state: ResearchState) -> dict:
     """
     prompt = f"""You are a strict panelist reviewing a research report for a conference.
 
-Question being addressed: {state.question}
-Topics that should be covered: {state.topics}
+    Question being addressed: {state.question}
+    Topics that should be covered: {state.topics}
 
-Report to review:
-{state.answer}
+    Report to review:
+    {state.answer}
 
-Rate this report from 0-5 based on:
-- Coverage: does it address every topic listed?
-- Accuracy: are the claims well-supported and plausible?
-- Depth: is each topic explained with real substance, not just surface-level mentions?
+    Rate this report from 0-5 based on:
+    - Coverage: does it address every topic listed?
+    - Accuracy: are the claims well-supported and plausible?
+    - Depth: is each topic explained with real substance, not just surface-level mentions?
 
-Then give specific, actionable feedback. If the rating is below 3, the feedback must
-clearly state what's missing or weak so the researcher can improve it on a retry.
+    Then give specific, actionable feedback. If the rating is below 3, the feedback must
+    clearly state what's missing or weak so the researcher can improve it on a retry.
 
-Respond with ONLY a JSON object in exactly this format, no other text:
-{{"rating": <integer 0-5>, "feedback": "<your feedback as a single string>"}}"""
+    Respond with ONLY a JSON object in exactly this format, no other text:
+    {{"rating": <integer 0-5>, "feedback": "<your feedback as a single string>"}}"""
 
     structured_llm = critic_llm.with_structured_output(CriticOutput, method="json_mode")
     result = structured_llm.invoke(prompt)
@@ -106,9 +112,10 @@ Requirements:
 - Rewrite for clarity and flow, but preserve all citations/sources mentioned in the notes
 - Close with a short conclusion tying the topics back to the original question
 - Target length: 800-1200 words
+- Do not add any salutations at end like these "Prepared by a seasoned researcher, 2026‑08‑25"
 
 Return only the final report text, no preamble like "Here is the report"."""
-
+    
     response = llm.invoke(prompt)
 
     return {
