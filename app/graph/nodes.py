@@ -111,7 +111,7 @@ Requirements:
 - Keep the technical substance from the research notes — do not remove facts, do not oversimplify
 - Rewrite for clarity and flow, but preserve all citations/sources mentioned in the notes
 - Close with a short conclusion tying the topics back to the original question
-- Target length: 800-1200 words
+- Target length: 800-1000 words
 - Do not add any salutations at end like these "Prepared by a seasoned researcher, 2026‑08‑25"
 
 Return only the final report text, no preamble like "Here is the report"."""
