@@ -21,3 +21,9 @@ requests==2.34.2
 
 sse-starlette==3.4.8
 httpx==0.28.1
+
+celery==5.4.0
+redis==5.2.1
+
+psycopg2-binary==2.9.10
+asyncpg==0.30.0

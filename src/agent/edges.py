@@ -1,4 +1,4 @@
-from agent.state import ResearchState
+from src.agent.state import ResearchState
 
 """
 To re route back if critic is not satisfied

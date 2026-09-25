@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from celery import Celery
 from celery.result import AsyncResult
 
-from tools.mcp_client import start_mcp_session, stop_mcp_session
-from agent.build_graph import graph
-from agent.state import ResearchState
+from src.tools.mcp_client import start_mcp_session, stop_mcp_session
+from src.agent.build_graph import graph
+from src.agent.state import ResearchState
 
 
 app = FastAPI(title="Multi-Agent Research & Report Generator")
@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = os.getenv("REDIS_URL")
 celery_app = Celery(
     "research_worker",
     broker=REDIS_URL,
@@ -78,7 +78,7 @@ async def get_status(task_id: str):
         else:
             return {"status": "Failed", "error": str(task_result.info)}
     else:
-        {"status": task_result.state}
+        return {"status": task_result.state}
 
 
 @app.get("/health")

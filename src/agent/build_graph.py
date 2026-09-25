@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph, START, END
-from agent.state import ResearchState
-from agent.edges import route_after_critic
-from agent.nodes import planner, researcher, critic, writer
+from src.agent.state import ResearchState
+from src.agent.edges import route_after_critic
+from src.agent.nodes import planner, researcher, critic, writer
 
 builder = StateGraph(ResearchState)
 

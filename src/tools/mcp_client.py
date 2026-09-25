@@ -6,7 +6,7 @@ mcp_client = MultiServerMCPClient(
     {
         "research-tools":{
             "command": "python",
-            "args": ["-m", "app.mcp_server.server"],
+            "args": ["-m", "src.tools.server"],
             "transport": "stdio",
         }
     }
