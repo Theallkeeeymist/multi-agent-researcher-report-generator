@@ -1,4 +1,4 @@
-from app.graph.state import ResearchState
+from agent.state import ResearchState
 
 """
 To re route back if critic is not satisfied
