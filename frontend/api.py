@@ -2,11 +2,11 @@ import time
 import requests
 import streamlit as st
 
-def fetch_research_report(api_url: str, question: str, status_placeholder):
+def fetch_research_report(api_url: str, question: str, status_placeholder, headers=None):
     """Sends the prompt and polls the backend until completion."""
     try:
-        # 1. Dispatch the task
-        init_response = requests.post(api_url, json={"question": question}, timeout=10)
+        # 1. Dispatch the task with authentication headers
+        init_response = requests.post(api_url, json={"question": question}, headers=headers, timeout=10)
         init_response.raise_for_status()
         task_id = init_response.json()["task_id"]
 
@@ -15,7 +15,8 @@ def fetch_research_report(api_url: str, question: str, status_placeholder):
         status_url = f"{base_url}/research/status/{task_id}"
 
         while True:
-            status_response = requests.get(status_url, timeout=10)
+            # Pass headers here as well in case you secure the status endpoint later
+            status_response = requests.get(status_url, headers=headers, timeout=10)
             status_response.raise_for_status()
             current_status = status_response.json()
 
@@ -36,5 +37,9 @@ def fetch_research_report(api_url: str, question: str, status_placeholder):
         return None, f"Can't reach the backend at {api_url}. Confirm Docker is running."
     except requests.exceptions.Timeout:
         return None, "API timed out while checking status."
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            return None, "Unauthorized: Your login session may be invalid or expired. Please sign in again."
+        return None, f"HTTP error: {str(e)}"
     except Exception as e:
         return None, f"Backend error: {str(e)}"
