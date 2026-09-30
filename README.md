@@ -1,4 +1,3 @@
-```markdown
 # Multi-Agent Research & Report Generator
 
 A LangGraph multi-agent pipeline that takes a research question, plans it into topics, gathers sources across the web, arXiv, and Semantic Scholar via MCP tools, critiques its own output, and produces a polished written report.
@@ -8,12 +7,10 @@ Built to demonstrate practical LangGraph orchestration, asynchronous worker dist
 ---
 
 ## How It Works
-
-```text
+```
 Query → Planner → Researcher ⇄ Critic → Writer → Report
                        ↑___________|
                   (loop if rating < 3, capped at 3 retries)
-
 ```
 
 1. **Planner** breaks the research question into 3–5 specific sub-topics.
